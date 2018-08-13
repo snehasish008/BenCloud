@@ -1,0 +1,102 @@
+---
+- hosts: PIP_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin
+  gather_facts: no
+  vars_files:
+   - "{{ config_file }}"
+
+  tasks:
+
+  - name: " delete the rc local entry for bootup configuration"
+    lineinfile:
+     dest:  /etc/rc.local
+     regexp: '^/etc/publicIpGateway_start.sh'
+     state: absent
+
+  - name: Delete rule in RPDB to use table routeCS for traffic coming on vxlan2 interface
+    command: ip rule del iif vxlan2 table routeCS
+    ignore_errors: yes
+
+  - name: Delete routes in above routing tables
+    command: ip route del default via {{ PublicIpGateway.defaultGWIp }} dev {{ PublicIpGateway.internetIntfName }} table routeCS
+    ignore_errors: yes
+
+  - name: Delete Route entery
+    lineinfile:
+     dest: /etc/iproute2/rt_tables
+     regexp: '^201 routeCS'
+     state: absent
+
+  - name: Delete rule in RPDB to use table routeIN for traffic coming from internet
+    command: ip rule del iif {{ PublicIpGateway.internetIntfName }} table routeIN
+    ignore_errors: yes
+
+  - name: delete routes in above routing tables
+    command: ip route del default via {{ PublicIpGateway.csdcTunnelremoteVxlanIp}} dev vxlan2 table routeIN
+    ignore_errors: yes
+
+  - name: Delete Route entery
+    lineinfile:
+     dest: /etc/iproute2/rt_tables
+     regexp: '^202 routeIN'
+     state: absent
+
+  - name: "  delete route in  routeSecNIC table"
+    command: ip route del default via {{ PublicIpGateway.defaultGWIp}} dev {{ PublicIpGateway.internetIntfName}} table routeSecNIC
+    ignore_errors: yes
+
+  - name: Delete Route entery
+    lineinfile:
+     dest: /etc/iproute2/rt_tables
+     regexp: '^203 routeSecNIC'
+     state: absent
+
+  - name: diable the ip forward rule 
+    command: sysctl -w net.ipv4.ip_forward=0
+    ignore_errors: yes
+
+  - name: enable rp_filter 
+    command: sysctl -w net.ipv4.conf.all.rp_filter=1
+    ignore_errors: yes
+
+  - name: enable rp_filter
+    command: sysctl -w net.ipv4.conf.default.rp_filter=1
+    ignore_errors: yes
+
+  - name: enable rp_filter
+    command: sysctl -w net.ipv4.conf.{{ PublicIpGateway.csdcIntfName }}.rp_filter=1
+    ignore_errors: yes
+
+  - name: enable rp_filter
+    command: sysctl -w net.ipv4.conf.{{ PublicIpGateway.internetIntfName }}.rp_filter=1
+    ignore_errors: yes
+
+  - name: enable rp_filter
+    command: sysctl -w net.ipv4.conf.vxlan2.rp_filter=1
+    ignore_errors: yes
+
+  - name: enable rp_filter
+    command: sysctl -w net.ipv4.conf.lo.rp_filter=1
+    ignore_errors: yes
+
+  - name: delete the vxlan interface  
+    command: ip link del vxlan2
+    ignore_errors: yes
+
+  - name: flush the nat rules
+    command: iptables -t nat -F
+    ignore_errors: yes
+
+  - name: delete tcp mss rule
+    command: iptables -t mangle -D FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1330
+    ignore_errors: yes
+
+  - name: delete the starup file
+    command: rm -f /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: delete the starup file
+    command: rm -f /etc/publicIpGateway_state
+    ignore_errors: yes

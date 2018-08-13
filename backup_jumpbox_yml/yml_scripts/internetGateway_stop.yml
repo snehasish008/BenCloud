@@ -1,0 +1,126 @@
+---
+- hosts: NF_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin
+  gather_facts: no
+
+  vars_files:
+    - "{{ config_file }}"
+
+  tasks:
+
+  - name: " delete the rc local entry for bootup configuration"
+    lineinfile:
+     dest:  /etc/rc.local
+     regexp: '^/etc/internetGateway_start.sh'
+     state: absent
+
+#1 >
+  - name: " #1.a delete route rules from the routeCS table "
+    command: ip rule del iif vxlan0 table routeCS
+    ignore_errors: yes
+
+#2 > 
+  - name: " #2.a delete route rules from the routeCS table"
+    command: ip route del default via {{ InternetGateway.defaultGWIp }} dev {{ InternetGateway.internetIntfName }} table routeCS
+    ignore_errors: yes
+
+#3 > 
+  - name: " #3.a Delet entry in the rt table "
+    lineinfile:
+     dest: /etc/iproute2/rt_tables
+     regexp: '^201 routeCS'
+     state: absent
+
+#4 >
+  - name: " #4.a delete route rule from the routeIN table"
+    command: ip rule del iif {{ InternetGateway.internetIntfName }} table routeIN
+    ignore_errors: yes
+
+#5 > 
+  - name: " #5.a delete route rule from the routeIN table"
+    command: ip route del default via {{ InternetGateway.csdcTunnelremoteVxlanIp }} dev vxlan0 table routeIN
+    ignore_errors: yes
+
+#6 >
+  - name: " #6.a Delete entry from the rt table "
+    lineinfile:
+     dest: /etc/iproute2/rt_tables
+     regexp: '^202 routeIN'
+     state: absent
+
+# 8 >
+  - name: " #8.a delete the route rule from the routeSecNIC "
+    command: ip rule del from {{ InternetGateway.internetIntfIp }} table routeSecNIC
+    ignore_errors: yes
+
+# 9 >
+  - name: " #9.a delete the route rule from the routeSecNIC"
+    command: ip route del default via  {{ InternetGateway.defaultGWIp}} dev {{ InternetGateway.internetIntfName}} table routeSecNIC
+    ignore_errors: yes
+
+#3 > 
+  - name: " #3.a Delete entry from the rt_table"
+    lineinfile:
+     dest: /etc/iproute2/rt_tables
+     regexp: '^203 routeSecNIC'
+     state: absent
+
+#7 >
+  - name: " #7.a disable rp_filter"
+    command: sysctl -w net.ipv4.conf.vxlan0.rp_filter=1
+    ignore_errors: yes
+
+#8 > Creating the vxlan tunnel
+  - name: " #8.a Delete the tunnel"
+    command: ip link del vxlan0
+    ignore_errors: yes
+
+#9 > 
+  - name: "  #9.a masquerade rule"
+    command: iptables -F -t nat
+    ignore_errors: yes
+
+  - name: "  #9.b delete tcp mss rule"
+    command: iptables -t mangle -D FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1330
+    ignore_errors: yes
+
+#10 >
+  - name: " #10.a disable ip foward"
+    command: sysctl -w net.ipv4.ip_forward=0
+    ignore_errors: yes
+
+#11 >
+  - name: " #11.a disable rp_filter"
+    command: sysctl -w net.ipv4.conf.all.rp_filter=1
+    ignore_errors: yes
+
+#12 > 
+  - name: " #12.a disable rp_filter"
+    command: sysctl -w net.ipv4.conf.default.rp_filter=1
+    ignore_errors: yes
+
+#13 >
+  - name: " #13.a disable rp_filter"
+    command: sysctl -w net.ipv4.conf.{{ InternetGateway.csdcIntfName }}.rp_filter=1
+    ignore_errors: yes
+
+#14 >
+  - name: " #14.a disable rp_filter"
+    command: sysctl -w net.ipv4.conf.{{ InternetGateway.internetIntfName }}.rp_filter=1
+    ignore_errors: yes
+
+#15 >
+  - name: " #15.a disable rp_filter"
+    command: sysctl -w net.ipv4.conf.lo.rp_filter=1
+    ignore_errors: yes
+
+#16 >
+  - name: " #16 delete the startup script "
+    command: rm -f /etc/internetGateway_start.sh
+    ignore_errors: yes
+
+  - name: " #16 delete the startup script "
+    command: rm -f /etc/internetGateway_state
+    ignore_errors: yes

@@ -1,0 +1,102 @@
+---
+- hosts: PIP_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin 
+  gather_facts: no
+
+  vars_files:
+   - "{{ config_file }}"
+
+  tasks:
+
+  - name: Fetch the internals config file
+    fetch: dest=/tmp/internal.yml src=/etc/publicIpGateway_state flat=yes
+
+  - name: Include the fetched internal file
+    include_vars: /tmp/internal.yml
+    ignore_errors: yes
+
+  - debug:
+     msg: Fetched index for vlan is {{ vxlanIntfIdx }}
+
+  - name: Add entry into the rc.local for persistant
+    shell: printf '/etc/publicIpGateway_attach.sh\n' >> /etc/rc.local
+
+  - name: Add entry into the rc.local for persistant
+    shell: printf '/etc/publicIpGateway_ipAdd.sh\n' >> /etc/rc.local
+
+  - name: Create file for storing publicIP 
+    shell: printf '\n' >> /etc/publicIpGateway_ipAdd.sh
+
+
+  - name: Create the VXlan interface towards the Internet GW
+    command: ip link add vxlan{{ vxlanIntfIdx }} type vxlan id {{ PublicIpGateway.internetGWTunnelvnid }} dev {{ PublicIpGateway.internetGWIntfName}} dstport 4789 local {{ PublicIpGateway.internetGWTunnellocalVtepIp }} remote {{ PublicIpGateway.internetGWTunnelremoteVtepIp }} nolearning
+    ignore_errors: yes
+  - name: Create the VXlan interface towards the Internet GW
+    shell: printf 'ip link add vxlan{{ vxlanIntfIdx }} type vxlan id {{ PublicIpGateway.internetGWTunnelvnid }} dev {{ PublicIpGateway.internetGWIntfName}} dstport 4789 local {{ PublicIpGateway.internetGWTunnellocalVtepIp }} remote {{ PublicIpGateway.internetGWTunnelremoteVtepIp }} nolearning\n'>> /etc/publicIpGateway_attach.sh
+    ignore_errors: yes
+
+  - name: Assign IP address to VXlan interface towards the Internet GW 
+    command: ip address add {{ PublicIpGateway.internetGWTunnellocalVxlanIp }}/{{ PublicIpGateway.internetGWTunnelVxlanIpPrefixLen }} dev vxlan{{ vxlanIntfIdx }}
+    ignore_errors: yes
+  - name: Assign IP address to VXlan interface towards the Internet GW
+    shell: printf 'ip address add {{ PublicIpGateway.internetGWTunnellocalVxlanIp }}/{{ PublicIpGateway.internetGWTunnelVxlanIpPrefixLen }} dev vxlan{{ vxlanIntfIdx }}\n'>> /etc/publicIpGateway_attach.sh
+    ignore_errors: yes
+
+  - name: Enable the Interface 
+    command: ifconfig vxlan{{ vxlanIntfIdx }} up up
+    ignore_errors: yes
+  - name: Enable the Interface 
+    shell: printf 'ifconfig vxlan{{ vxlanIntfIdx }} up up\n'>> /etc/publicIpGateway_attach.sh
+    ignore_errors: yes
+
+  - name: Create Routing table for traffic coming from CS-DC that requires public IP service
+    shell: printf '204 routePIP\n' >> /etc/iproute2/rt_tables
+    ignore_errors: yes
+
+  - name: Add rule in RPDB to use table routePIP for traffic coming on vxlan{{ vxlanIntfIdx }} interface
+    command: ip rule add iif vxlan{{ vxlanIntfIdx }} table routePIP
+    ignore_errors: yes
+  - name: Add rule in RPDB to use table routePIP for traffic coming on vxlan{{ vxlanIntfIdx }} interface
+    shell: printf 'ip rule add iif vxlan{{ vxlanIntfIdx }} table routePIP\n' >> /etc/publicIpGateway_attach.sh
+    ignore_errors: yes
+
+  - name: Add routes in above routing tables
+    command: ip route add default via {{ PublicIpGateway.defaultGWIp }} dev {{ PublicIpGateway.internetIntfName }} table routePIP
+    ignore_errors: yes
+  - name: Add routes in above routing tables
+    shell: printf 'ip route add default via {{ PublicIpGateway.defaultGWIp }} dev {{ PublicIpGateway.internetIntfName }} table routePIP\n' >> /etc/publicIpGateway_attach.sh
+    ignore_errors: yes
+
+  - name: disable the rp_filter
+    command: sysctl -w net.ipv4.conf.vxlan{{ vxlanIntfIdx }}.rp_filter=0
+    ignore_errors: yes
+  - name: disable the rp_filter
+    shell: printf 'sysctl -w net.ipv4.conf.vxlan{{ vxlanIntfIdx }}.rp_filter=0\n' >> /etc/publicIpGateway_attach.sh
+    ignore_errors: yes
+
+  - name: disable rp_filter 
+    command: sysctl -w net.ipv4.conf.all.rp_filter=0
+    ignore_errors: yes
+  - name: disable rp_filter 
+    shell: printf 'sysctl -w net.ipv4.conf.all.rp_filter=0\n' >> /etc/publicIpGateway_attach.sh
+    ignore_errors: yes
+
+  - name: "change the file permissons"
+    command: chmod +x /etc/publicIpGateway_attach.sh
+
+  - name: "change the file permissons"
+    command: chmod +x /etc/publicIpGateway_ipAdd.sh
+
+  - name: INcremet the vxlanIndex 
+    set_fact: newvxlanIntfIdx={{ vxlanIntfIdx | int + 1 }}
+
+  - debug:
+       msg: " new vx lan indx is {{ newvxlanIntfIdx }}"
+
+  - name: " update the newvxlan interface ID"
+    replace:
+      path: /etc/publicIpGateway_state
+      regexp: '^vxlanIntfIdx: {{ vxlanIntfIdx }}'
+      replace: 'vxlanIntfIdx: {{ newvxlanIntfIdx }}'

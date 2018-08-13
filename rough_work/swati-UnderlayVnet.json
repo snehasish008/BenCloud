@@ -1,0 +1,57 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+
+  "metadata": {
+    "description": "This template contains the ground-truth for VNET's address space and ALL subnets in it. This Underlay/Internet Vnet connects directly to the Underlay and hosts all of customers' Internet and PublicIP Gateways. Each customer's gateways (one Internet Gateway and potentioally multiple PublicIP Gateways) will be hosted in a separate subnet in the Vnet. Customer's PC reaches these gateways via Vxlan tunnels built from their VRF to the gateways in this Vnet. To add a new subnet for a customer, just add it to VNET resource (without deleting existing ones). This Vnet will also host the ExpressRoute gateway (in the 'GatewaySubnet') through which the Vnet will link to the Underlay ('GatewaySubnet' must be at least /28 in size, and its name is a constant and must not change)."
+  },
+  
+  "parameters": {},
+  
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2017-08-01",
+      "name": "swati_UnderlayVnet_West_qatest",
+      "location": "[resourceGroup().location]",
+      "properties": {	
+	
+        "addressSpace": {
+          "addressPrefixes": [
+            "12.1.0.0/16"
+          ]
+        },
+	
+        "subnets": [
+	  {
+            "name": "GatewaySubnet",
+            "properties": {
+              "addressPrefix": "12.1.0.0/24"
+            }
+	  },
+	  
+	  {
+            "name": "swati_alias1_Subnet",
+            "properties": {
+              "addressPrefix": "12.1.1.0/24"
+            }
+          },
+	  	  
+	  {
+            "name": "swati_alias2_Subnet",
+            "properties": {
+              "addressPrefix": "12.1.2.0/24"
+            }
+          },
+	  	  
+	  {
+            "name": "swati_alias3_Subnet",
+            "properties": {
+              "addressPrefix": "12.1.3.0/24"
+            }
+          }
+        ]
+      }
+    }        
+  ]
+}

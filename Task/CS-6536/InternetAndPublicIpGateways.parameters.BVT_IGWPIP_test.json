@@ -1,0 +1,36 @@
+{
+  "resource_group": "BVT_IGWPIP_test",
+  "customer": "BVT_IGWPIP_test",
+  "location": "West US 2",
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "AdminUsername": {
+      "value": "csadmin"
+    },
+    "VnetResourceGroup": {
+      "value": "swati_UnderlayVnet_West_qatest"
+    },
+    "VnetName": {
+      "value": "swati_UnderlayVnet_West_qatest"
+    },
+    "CustomerSubnetName": {
+      "value": "swatiBVT_alias5_Subnet"
+    },
+    "SshSubnet": {
+      "value": "12.1.0.0/16"
+    },    
+    "InstanceCount": {
+      "value": 1
+    },
+    "VmSkuSize": {
+      "value": "Standard_DS2_V2"
+    },
+    "VmSkuTier": {
+      "value": "Standard"
+    },
+    "SshPublicKey": {
+      "value": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCZbt3E3fwWlQXI390YE+pCjHEdVzL6NO4Ob2zMMw2zuh4yMPrIKiUypMa6UD2l68F/X5WgTa2qWTDPRtltzJQCmwxCBH0ZdI6K8UGOUgUQubzdGnLDtpJWi26oiKZtGSsHBCHKbC7hBONDeLnt/Kkp6w223MQ9IjRmoRaURQ2krPKKgHSeHCHlJ3Lm9ytxuyz/Eino7hm4/mvoH9JQqqc7s1QczrHp5srFBeUrHU8yIAC2WaHm3zX9xFc1JHAfIpynSOjvcQ2mt3As1R8Tw6z/wHlEDW/lvHYl2xPn4r3sMD8mtue1TkJmND3txE/BsICStZHRht+2XmFck7rsa1bp swati@swati-jumpbox"
+    }
+  }
+}

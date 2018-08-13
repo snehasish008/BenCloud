@@ -1,0 +1,65 @@
+---
+- hosts: NF_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin
+  gather_facts: no 
+  vars_files:
+   - "{{ config_file }}"
+
+  tasks:
+
+  - name: Identify the name of the vxlan interface to be deleted based on IP
+    shell: ifconfig | grep -B1 {{ InternetGateway.publicIpGWTunnelVxlanIp }} | awk '$1!="inet" && $1!="--" {print $1}' | xargs echo "vxlanIntf:" | sed 's/.$//' > /tmp/t1.txt
+    ignore_errors: yes
+
+
+  - name: fetch the config file containing the vxlan identifier to be deleted
+    fetch: dest=/tmp/delVxlan.yml src=/tmp/t1.txt flat=yes
+    ignore_errors: yes
+
+  - name: Include the Config file
+    include_vars: /tmp/delVxlan.yml
+    ignore_errors: yes
+
+#2 > 
+  - name: " #2.a delete route rule from table routePIP"
+    command: ip route del default via {{ InternetGateway.publicIpGWTunnelremoteVxlanIp}} dev {{ vxlanIntf }} table routePIP_{{ vxlanIntf }}
+    ignore_errors: yes
+
+#3 >
+  - name: " #3.a Delete entry in the rt table"
+    lineinfile:
+     dest: /etc/iproute2/rt_tables
+     regexp: '^204 routePIP_{{ vxlanIntf }}'
+     state: absent
+
+#4 >
+  - name: " #4.a disable the rp filter"
+    command: sysctl -w net.ipv4.conf.{{ vxlanIntf }}.rp_filter=1
+    ignore_errors: yes
+
+#5 > 
+  - name: " #5.a Delete the vxlan intf  "
+    command: ip link del {{ vxlanIntf }}
+    ignore_errors: yes
+
+  - name: " Delete bootup entery from the rc.local"
+    lineinfile:
+     dest: /etc/rc.local
+     regexp: '^/etc/internetGateway_attach.sh'
+     state: absent
+
+  - name: " Delete bootup entery from the rc.local"
+    lineinfile:
+     dest: /etc/rc.local
+     regexp: '^/etc/internetGateway_ipAdd.sh'
+     state: absent
+
+  - name: " Delete the startup script"
+    command: rm -f /etc/internetGateway_attach.sh
+    ignore_errors: yes
+
+  - name: " Delete the startup script"
+    command: rm -f /etc/internetGateway_ipAdd.sh
+    ignore_errors: yes

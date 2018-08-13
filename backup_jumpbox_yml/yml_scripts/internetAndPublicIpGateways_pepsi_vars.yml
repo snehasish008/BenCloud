@@ -1,0 +1,110 @@
+#    configuration parameters for InternetGateway
+#     csdcVnid: "vxlan ID for the vxlan tunnel towards the CE-router"
+#     csdcIntfName: "Interface that connects to CS-DC "
+#     csdcIntfIp: "IP address assigned to interface towards CS-DC" 
+#     csdcTunnelRemoteVtepIp: "VTEP IP on CE Router" 
+#     csdcTunnellocalVtepIp: "VTEP IP on InterfaceGateway for CD-DC tunnel"
+#     csdcTunnelremoteVxlanIp: "IP address assigned to vxlan interface on CE-Router
+#                               for tunnel to internet gateway"
+#     csdcTunnellocalVxlanIp: "IP address assigned to vxlan interface on internet gateway
+#                              for tunnel to CE router" 
+#     csdcTunneVxlanIpPrefixLen: "Prefix length for IP adress assigned to vxlan interface on
+#                             internet gateway for tunnel to CE router" 
+#     defaultGwIp: " default gateway IP address of Azure vnet"
+#     internetIntfName: "Interface that connects to internet "
+#     internetIntfIp: "IP address of interface that connects to internet "
+#     publicIpGWvnid: "vxlan ID for the vxlan tunnel towards publicIpgateway"
+#     publicIpGWIntfName: "Interface that connects to publicIpGateway "
+#     publiIpGWTunnelremoteVtepIp: "VTEP IP on PublicIpGateway" 
+#     publicIpGWTunnellocalVtepIp: "VTEP IP on InterfaceGateway for publicIpGateway tunnel"
+#     publicIpTunnelremoteVxlanIp: "IP address assigned to vxlan interface on PublicIpGatway 
+#                               for tunnel to internet gateway"
+#     publiIpGWTunnelVxlanIp: "IP address assigned to vxlan interface on internet gateway
+#                              for tunnel to publicIpGateway" 
+#     publicIpGWTunnelVxlanIpPrefixLen: "Prefix length for IP address assigned to vxlan interface i
+#                               on internet gateway for tunnel to publicIpGateway" 
+#
+
+InternetGateway:
+ csdcVnid: 142
+ csdcIntfName: eth0
+ csdcIntfIp: 12.1.3.6
+ csdcTunnelRemoteVtepIp: 11.0.0.4
+ csdcTunnellocalVtepIp: 12.1.3.6
+ csdcTunnelremoteVxlanIp: 169.254.10.1
+ csdcTunnellocalVxlanIp: 169.254.10.2
+ csdcTunnelVxlanIpPrefixLen: 30
+
+ defaultGWIp: 12.1.3.1
+ internetIntfName: eth1
+ internetIntfIp: 12.1.3.7
+
+ publicIpGWvnid: 172
+ publicIpGWIntfName: eth0
+ publicIpGWTunnelremoteVtepIp: 12.1.3.4
+ publicIpGWTunnellocalVtepIp: 12.1.3.6
+ publicIpGWTunnelremoteVxlanIp: 169.254.13.1
+ publicIpGWTunnelVxlanIp: 169.254.13.2
+ publicIpGWTunnelVxlanIpPrefixLen: 30
+
+#    configuration parameters for PublicIpGatway 
+#     csdcVnid: "vxlan ID for the vxlan tunnel towards the CE-router"
+#     csdcIntfName: "Interface that connects to CS-DC "
+#     csdcIntfIp: "IP address assigned to interface towards CS-DC" 
+#     csdcTunnelRemoteVtepIp: "VTEP IP on CE Router" 
+#     csdcTunnellocalVtepIp: "VTEP IP on PublicIpGateway for CD-DC tunnel"
+#     csdcTunnelremoteVxlanIp: "IP address assigned to vxlan interface on CE-Router
+#                               for tunnel to publicIpGateway"
+#     csdcTunnellocalVxlanIp: "IP address assigned to vxlan interface on publicIpGateway
+#                              for tunnel to CE router" 
+#     csdcTunneVxlanIpPrefixLen: "Prefix Lenght for IP address assigned to vxlan interface on 
+#                                publicIpGateway for tunnel to CE router"
+#     defaultGwIp: " default gateway IP address of Azure vnet"
+#     internetIntfName: "Interface that connects to internet "
+#     internetGWTunnelvnid: "VXLAN ID for the vxlan tunnel towards Internetgateway"
+#     internetGWIntfName: "Interface that connects to internetGateway "
+#     internetGWTunnellocalVxlanIp: "IP address assigned to vxlan interface on publicIpGateway
+#                              for tunnel to internetGateway" 
+#     internetGWTunnelVxlanIpPrefixLen: "Prefix length for IP address assigned to vxlan interface
+#                              for tunnel to internetGateway"
+#     internetGWTunnellocalVtepIp: "VTEP IP on publicIpGateway for tunnel to interfaceGateway"
+#     inernetGWTunnelremoteVtepIp: "VTEP IP on interfaceGateway for tunnel to publicIpGateway"
+
+PublicIpGateway:
+ csdcVnid: 152
+ csdcIntfName: eth0
+ csdcIntfIp: 12.1.3.4
+ csdcTunnellocalVtepIp: 12.1.3.4
+ csdcTunnelremoteVtepIp: 11.0.0.4
+ csdcTunnellocalVxlanIp: 169.254.11.2
+ csdcTunnelremoteVxlanIp: 169.254.11.1
+ csdcTunnelVxlanIpPrefixLen: 30
+
+ defaultGWIp: 12.1.3.1
+ internetIntfName: eth1
+ 
+ internetGWTunnelvnid: 172
+ internetGWIntfName: eth0
+ internetGWTunnellocalVxlanIp: 169.254.13.1
+ internetGWTunnelVxlanIpPrefixLen: 30
+ internetGWTunnellocalVtepIp: 12.1.3.4
+ internetGWTunnelremoteVtepIp: 12.1.3.6
+
+#configuration parameters for VPIN VM that need PublicIP service 
+# vnid: vxlan tunnel Id for tunnel between internetGateway and publicIpGateway 
+# internetIntfName: interface that connets to internet on publicIpGateway
+# internetIntfIp: IP on internet NIC that corresponds to VIP allocated to the VPIN VM 
+#                 (Note: Please don't put VIP for this parameter) 
+# internetIntfIpPrefixLen : Prefix length for internetIntfIp 
+# vpinVmIp: vpin VM that needs publicIP service
+# vpinVmServiceProtocol, vpinVmServicePort : VPIN VM service that needs PublicIP service
+
+PepsiWebserver:
+ vnid: 172
+ internetIntfName: eth1
+ internetIntfIp: 12.1.3.9
+ internetIntfIpPrefixLen: 24
+ vpinVmIp: 11.0.1.5
+ vpinVmServiceProtocol: any 
+ vpinVmServicePort: any
+

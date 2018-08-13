@@ -1,0 +1,60 @@
+---
+- hosts: NF_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin 
+  gather_facts: no
+
+  tasks:
+  - name: Load Data File
+    include_vars:
+      file: "{{ config_file }}"
+      name: datadict
+
+  - name: Identify the name of the vxlan interface to be deleted based on vxlan ID
+    shell: ip -d link show | grep -B2 "vxlan id {{ datadict[PublicIpName].vnid }}" | awk '$1 {print $2}'| awk 'NR==1{print $1}' |  xargs echo "vxlanIntf:" | sed 's/.$//' > /tmp/t1.txt
+    ignore_errors: yes
+
+  - name: fetch the config file containing the vxlan identifier to be deleted
+    fetch: dest=/tmp/igwIPadd.yml src=/tmp/t1.txt flat=yes
+    ignore_errors: yes
+
+  - name: Include the Config file
+    include_vars: /tmp/igwIPadd.yml
+    ignore_errors: yes
+
+  - debug:
+     msg: The vxlan intf for vnid {{ datadict[PublicIpName].vnid }} is {{ vxlanIntf }}
+
+  - name: Fetch the internals config file
+    fetch: dest=/tmp/internal.yml src=/etc/internetGateway_state flat=yes
+
+  - name: Include the fetched internal file
+    include_vars: /tmp/internal.yml
+    ignore_errors: yes
+
+  - debug:
+     msg: Fetched priority to be used is  {{ priority }}
+
+# 5 >
+  - name: " #5.a Add rule in RPDB to use table routePIP"
+    command: ip rule add iif vxlan0 from {{ datadict[PublicIpName].vpinVmIp }}/32 priority {{ priority }} table routePIP_{{ vxlanIntf }}
+    ignore_errors: yes
+  - name: " #5.a Add rule in RPDB to use table routePIP"
+    shell: printf 'ip rule add iif vxlan0 from {{ datadict[PublicIpName].vpinVmIp }}/32 priority {{ priority }} table routePIP_{{ vxlanIntf }} \n' >> /etc/internetGateway_ipAdd.sh
+    ignore_errors: yes
+
+  - name: change the persmissions 
+    command: chmod +x /etc/internetGateway_ipAdd.sh
+
+  - name: Increment the priority
+    set_fact: newpriority={{ priority | int + 1 }}
+
+  - debug:
+       msg: " new priority is {{ newpriority }}"
+
+  - name: " update the newpriority interface ID"
+    replace:
+      path: /etc/internetGateway_state
+      regexp: '^priority: {{ priority }}'
+      replace: 'priority: {{ newpriority }}'

@@ -1,0 +1,38 @@
+---
+- hosts: NF_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin
+  gather_facts: no
+
+  tasks:
+  - name: Load Data File
+    include_vars:
+      file: "{{ config_file }}"
+      name: datadict
+ 
+  - name: Identify the name of the vxlan interface to be deleted based on vxlan ID
+    shell: ip -d link show | grep -B2 "vxlan id {{ datadict[PublicIpName].vnid }}" | awk '$1 {print $2}'| awk 'NR==1{print $1}' |  xargs echo "vxlanIntf:" | sed 's/.$//' > /tmp/t1.txt
+    ignore_errors: yes
+
+  - name: fetch the config file containing the vxlan identifier to be deleted
+    fetch: dest=/tmp/igwIPadd.yml src=/tmp/t1.txt flat=yes
+    ignore_errors: yes
+
+  - name: Include the Config file
+    include_vars: /tmp/igwIPadd.yml
+    ignore_errors: yes
+
+  - debug:
+     msg: The vxlan intf for vnid {{ datadict[PublicIpName].vnid }} is {{ vxlanIntf }}
+
+  - name: " #1.a delet route rule from table routePIP"
+    command: ip rule del iif vxlan0 from {{ datadict[PublicIpName].vpinVmIp }}/32 table routePIP_{{ vxlanIntf }}
+    ignore_errors: yes
+
+  - name: " #1.a delet route rule from table routePIP"
+    lineinfile:
+     dest: /etc/internetGateway_ipAdd.sh
+     regexp: 'ip rule add iif vxlan0 from {{ datadict[PublicIpName].vpinVmIp }}/32'
+     state: absent
+    ignore_errors: yes

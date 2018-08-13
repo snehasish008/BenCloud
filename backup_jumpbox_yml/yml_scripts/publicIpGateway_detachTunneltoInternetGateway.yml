@@ -1,0 +1,69 @@
+---
+- hosts: PIP_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin
+  gather_facts: no
+
+  vars_files:
+   - "{{ config_file }}"
+
+  tasks:
+
+  - name: Identify the name of the vxlan interface to be deleted based on IP
+    shell: ifconfig | grep -B1 {{ PublicIpGateway.internetGWTunnellocalVxlanIp }} | awk '$1!="inet" && $1!="--" {print $1}' | xargs echo "vxlanIntf:" | sed 's/.$//' > /tmp/t1.txt
+    ignore_errors: yes
+
+  - name: fetch the config file containing the vxlan identifier to be deleted
+    fetch: dest=/tmp/delVxlan.yml src=/tmp/t1.txt flat=yes
+    ignore_errors: yes
+
+  - name: Include the Config file
+    include_vars: /tmp/delVxlan.yml
+    ignore_errors: yes
+
+  - name: " delete the rc local entry for bootup configuration"
+    lineinfile:
+     dest:  /etc/rc.local
+     regexp: '^/etc/publicIpGateway_attach.sh'
+     state: absent
+
+  - name: " delete the rc local entry for bootup configuration"
+    lineinfile:
+     dest:  /etc/rc.local
+     regexp: '^/etc/publicIpGateway_ipAdd.sh'
+     state: absent
+
+  - name: delete rule in RPDB to use table routePIP for traffic coming on {{ vxlanIntf }} interface
+    command: ip rule del iif {{ vxlanIntf }} table routePIP
+    ignore_errors: yes
+
+  - name: delete routes in above routing tables
+    command: ip route del default via {{ PublicIpGateway.defaultGWIp }} dev {{ PublicIpGateway.internetIntfName }} table routePIP
+    ignore_errors: yes
+
+  - name: emable the rp_filter
+    command: sysctl -w net.ipv4.conf.{{ vxlanIntf }}.rp_filter=1
+    ignore_errors: yes
+
+  - name: enable rp_filter
+    command: sysctl -w net.ipv4.conf.all.rp_filter=1
+    ignore_errors: yes
+
+  - name: Delete the VXlan interface towards the Internet GW
+    command: ip link del {{ vxlanIntf }}
+    ignore_errors: yes
+
+  - name: Delete Route entery
+    lineinfile:
+     dest: /etc/iproute2/rt_tables
+     regexp: '^204 routePIP'
+     state: absent
+
+  - name: Delete the startup file 
+    command: rm -f /etc/publicIpGateway_attach.sh
+    ignore_errors: yes
+
+  - name: Delete the startup file 
+    command: rm -f /etc/publicIpGateway_ipAdd.sh
+    ignore_errors: yes

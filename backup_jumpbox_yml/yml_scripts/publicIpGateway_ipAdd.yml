@@ -1,0 +1,62 @@
+---
+- hosts: PIP_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin 
+  gather_facts: no
+
+  tasks:
+
+  - name: Load Data File
+    include_vars:
+       file: "{{ config_file }}"
+       name: datadict
+
+  - name: Fetch the internals config file
+    fetch: dest=/tmp/internal.yml src=/etc/publicIpGateway_state flat=yes
+
+  - name: Include the fetched internal file
+    include_vars: /tmp/internal.yml
+    ignore_errors: yes
+
+  - debug:
+     msg: Fetched index for vlan is {{ vxlanIntfIdx }}
+
+# have changed the azureSecNicIntfIp with internetIntfIp
+  - name: Assign the ip address on the interface 
+    command: ip address add {{ datadict[PublicIpName].internetIntfIp }}/{{ datadict[PublicIpName].internetIntfIpPrefixLen }} dev {{ datadict[PublicIpName].internetIntfName }}
+    ignore_errors: yes
+  - name: Assign the ip address on the interface 
+    shell: printf 'ip address add {{ datadict[PublicIpName].internetIntfIp }}/{{ datadict[PublicIpName].internetIntfIpPrefixLen }} dev {{ datadict[PublicIpName].internetIntfName }}\n'>> /etc/publicIpGateway_ipAdd.sh
+
+  - name: " Add rule in RPDB to use table routeSecNIC"
+    command: ip rule add from {{ datadict[PublicIpName].internetIntfIp  }} table routeSecNIC
+    ignore_errors: yes
+  - name: " Add rule in RPDB to use table routeSecNIC"
+    shell: printf 'ip rule add from {{ datadict[PublicIpName].internetIntfIp }} table routeSecNIC\n' >> /etc/publicIpGateway_ipAdd.sh
+    ignore_errors: yes
+
+  - name: Add DNAT rule for incoming traffic to public IP
+    command: iptables -t nat -A PREROUTING -i {{ datadict[PublicIpName].internetIntfName }} -d {{ datadict[PublicIpName].internetIntfIp }} -p {{ datadict[PublicIpName].vpinVmServiceProtocol }} --dport {{ datadict[PublicIpName].vpinVmServicePort }} -j DNAT --to {{ datadict[PublicIpName].vpinVmIp }}:{{ datadict[PublicIpName].vpinVmServicePort }}
+    when: (datadict[PublicIpName].vpinVmServiceProtocol != "any") and (datadict[PublicIpName].vpinVmServicePort != "any")
+    ignore_errors: yes
+  - name: Add DNAT rule for incoming traffic to public IP
+    shell: printf 'iptables -t nat -A PREROUTING -i {{ datadict[PublicIpName].internetIntfName }} -d {{ datadict[PublicIpName].internetIntfIp }} -p {{ datadict[PublicIpName].vpinVmServiceProtocol }} --dport {{ datadict[PublicIpName].vpinVmServicePort }} -j DNAT --to {{ datadict[PublicIpName].vpinVmIp }}:{{ datadict[PublicIpName].vpinVmServicePort }}\n' >> /etc/publicIpGateway_ipAdd.sh
+    when: (datadict[PublicIpName].vpinVmServiceProtocol != "any") and (datadict[PublicIpName].vpinVmServicePort != "any")
+    ignore_errors: yes
+
+  - name: Add DNAT rule for incoming traffic to public IP
+    command: iptables -t nat -A PREROUTING -i {{ datadict[PublicIpName].internetIntfName }} -d {{ datadict[PublicIpName].internetIntfIp }} -p all -j DNAT --to {{ datadict[PublicIpName].vpinVmIp }}
+    when: (datadict[PublicIpName].vpinVmServiceProtocol == "any") or (datadict[PublicIpName].vpinVmServicePort == "any")
+    ignore_errors: yes
+  - name: Add DNAT rule for incoming traffic to public IP
+    shell: printf 'iptables -t nat -A PREROUTING -i {{ datadict[PublicIpName].internetIntfName }} -d {{ datadict[PublicIpName].internetIntfIp }} -p all -j DNAT --to {{ datadict[PublicIpName].vpinVmIp }}\n' >> /etc/publicIpGateway_ipAdd.sh
+    when: (datadict[PublicIpName].vpinVmServiceProtocol == "any") or (datadict[PublicIpName].vpinVmServicePort == "any")
+    ignore_errors: yes
+
+  - name: Add SNAT rule for outgoing traffic from public IP
+    command: iptables -t nat -A POSTROUTING -o eth1 -s {{ datadict[PublicIpName].vpinVmIp }} -j SNAT --to-source {{ datadict[PublicIpName].internetIntfIp }}
+    ignore_errors: yes
+  - name: Add DNAT rule for incoming traffic to public IP
+    shell: printf 'iptables -t nat -A POSTROUTING -o eth1 -s {{ datadict[PublicIpName].vpinVmIp }} -j SNAT --to-source {{ datadict[PublicIpName].internetIntfIp }}\n' >> /etc/publicIpGateway_ipAdd.sh
+    ignore_errors: yes

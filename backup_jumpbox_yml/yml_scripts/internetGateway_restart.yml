@@ -1,0 +1,13 @@
+---
+- hosts: NF_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin 
+  gather_facts: no
+
+  tasks:
+
+#1 >
+  - name: " #1.a Reboot the IGW "
+    command: shutdown -r
+    ignore_errors: yes

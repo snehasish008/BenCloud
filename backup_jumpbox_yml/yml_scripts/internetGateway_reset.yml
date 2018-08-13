@@ -1,0 +1,30 @@
+---
+- hosts: NF_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin
+  gather_facts: no
+
+  tasks:
+
+  - name: " Delete bootup entery from the rc.local"
+    lineinfile:
+     dest: /etc/rc.local
+     regexp: '^/etc/internetGateway_(.+)\.sh'
+     state: absent
+    ignore_errors: yes
+
+  - name: " Delet entry in the rt table "
+    lineinfile:
+     dest: /etc/iproute2/rt_tables
+     regexp: '^20. route.+'
+     state: absent
+    ignore_errors: yes
+
+  - name: " Delete the startup script"
+    shell: rm -rf /etc/internetGateway_*
+    ignore_errors: yes
+
+  - name: " Reboot the VM "
+    command: shutdown -r
+    ignore_errors: yes

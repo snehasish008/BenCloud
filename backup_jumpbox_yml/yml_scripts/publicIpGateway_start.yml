@@ -1,0 +1,160 @@
+---
+- hosts: PIP_VMS
+  become: yes
+  become_user: root
+  remote_user: csadmin
+  gather_facts: no
+
+  vars_files:
+   - "{{ config_file }}"
+
+  tasks:
+
+  - name: Add entry into the rc.local for persistant
+    shell: printf '/etc/publicIpGateway_start.sh\n' >> /etc/rc.local
+
+  - name: set startIndex for vxlan interface in internal state
+    shell: printf 'vxlanIntfIdx{{ ":" }} 3\n' >> /etc/publicIpGateway_state
+
+  - name: Create the Vxlan Interface towards the CE router
+    command: ip link add vxlan2 type vxlan id {{ PublicIpGateway.csdcVnid }} dev {{ PublicIpGateway.csdcIntfName }} dstport 4789 remote {{ PublicIpGateway.csdcTunnelremoteVtepIp }} local {{ PublicIpGateway.csdcTunnellocalVtepIp }} nolearning
+    ignore_errors: yes
+  - name: Create the Vxlan Interface towards the CE router
+    shell: printf 'ip link add vxlan2 type vxlan id {{ PublicIpGateway.csdcVnid }} dev {{ PublicIpGateway.csdcIntfName }} dstport 4789 remote {{ PublicIpGateway.csdcTunnelremoteVtepIp }} local {{ PublicIpGateway.csdcTunnellocalVtepIp }} nolearning\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: Assign the IP address to the vxlan interface
+    command: ip address add {{ PublicIpGateway.csdcTunnellocalVxlanIp }}/{{ PublicIpGateway.csdcTunnelVxlanIpPrefixLen }} dev vxlan2
+    ignore_errors: yes
+  - name: Assign the IP address to the vxlan
+    shell: printf 'ip address add {{ PublicIpGateway.csdcTunnellocalVxlanIp }}/{{ PublicIpGateway.csdcTunnelVxlanIpPrefixLen }} dev vxlan2\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: " #3.a Set up the vxlan Interface "
+    command: ifconfig vxlan2 mtu 1370 up
+    ignore_errors: yes
+  - name: " #3.a Set up the vxlan Interface "
+    shell: printf 'ifconfig vxlan2 mtu 1370 up\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: " clamp tcp mss(vxlan mtu - 40) "
+    command: iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1330
+    ignore_errors: yes
+  - name: " clamp tcp mss(vxlan mtu - 40)"
+    shell: printf 'iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1330\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: enable the vxlan interface
+    command: ifconfig vxlan2 up up
+    ignore_errors: yes
+  - name: enable the vxlan interface
+    shell: printf 'ifconfig vxlan2 up up\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: Create Routing table for traffic coming from CS-DC
+    shell: printf '201 routeCS\n' >> /etc/iproute2/rt_tables
+    ignore_errors: yes
+
+  - name: Add rule in RPDB to use table routeCS for traffic coming on vxlan2 interface
+    command: ip rule add iif vxlan2 table routeCS
+    ignore_errors: yes
+  - name: Add rule in RPDB to use table routeCS for traffic coming on vxlan2 interface
+    shell: printf 'ip rule add iif vxlan2 table routeCS\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: Add routes in above routing tables
+    command: ip route add default via {{ PublicIpGateway.defaultGWIp }} dev {{ PublicIpGateway.internetIntfName }} table routeCS
+    ignore_errors: yes
+  - name: Add routes in above routing tables
+    shell: printf 'ip route add default via {{ PublicIpGateway.defaultGWIp }} dev {{ PublicIpGateway.internetIntfName }} table routeCS\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: Create Routing table for traffic coming from Internet
+    shell: printf '202 routeIN\n' >> /etc/iproute2/rt_tables
+    ignore_errors: yes
+
+  - name: Add rule in RPDB to use table routeIN for traffic coming from internet
+    command: ip rule add iif {{ PublicIpGateway.internetIntfName }} table routeIN
+    ignore_errors: yes
+  - name: Add rule in RPDB to use table routeIN for traffic coming from internet
+    shell: printf 'ip rule add iif {{ PublicIpGateway.internetIntfName }} table routeIN\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: Add routes in above routing tables
+    command: ip route add default via {{ PublicIpGateway.csdcTunnelremoteVxlanIp }} dev vxlan2 table routeIN
+    ignore_errors: yes
+  - name: Add routes in above routing tables
+    shell: printf 'ip route add default via {{ PublicIpGateway.csdcTunnelremoteVxlanIp }} dev vxlan2 table routeIN\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+
+  - name: Create Routing table for traffic coming from secondary NIC
+    shell: printf '203 routeSecNIC\n' >> /etc/iproute2/rt_tables
+    ignore_errors: yes
+
+  - name: "  Add route in  routeSecNIC table"
+    command: ip route add default via {{ PublicIpGateway.defaultGWIp}} dev {{ PublicIpGateway.internetIntfName}} table routeSecNIC
+    ignore_errors: yes
+  - name: "  Add route in  routeSecNIC table"
+    shell: printf 'ip route add default via {{ PublicIpGateway.defaultGWIp}} dev {{ PublicIpGateway.internetIntfName}} table routeSecNIC\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: set the ip forward rule
+    command: sysctl -w net.ipv4.ip_forward=1
+    ignore_errors: yes
+  - name: set the ip forward rule
+    shell: printf 'sysctl -w net.ipv4.ip_forward=1\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: disable rp_filter
+    command: sysctl -w net.ipv4.conf.all.rp_filter=0
+    ignore_errors: yes
+  - name: disable rp_filter
+    shell: printf 'sysctl -w net.ipv4.conf.all.rp_filter=0\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: disable rp_filter
+    command: sysctl -w net.ipv4.conf.default.rp_filter=0
+    ignore_errors: yes
+  - name: disable rp_filter
+    shell: printf 'sysctl -w net.ipv4.conf.default.rp_filter=0\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: disable rp_filter
+    command: sysctl -w net.ipv4.conf.{{ PublicIpGateway.csdcIntfName }}.rp_filter=0
+    ignore_errors: yes
+  - name: disable rp_filter
+    shell: printf 'sysctl -w net.ipv4.conf.{{ PublicIpGateway.csdcIntfName }}.rp_filter=0\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: disable rp_filter
+    command: sysctl -w net.ipv4.conf.{{ PublicIpGateway.internetIntfName }}.rp_filter=0
+    ignore_errors: yes
+  - name: disable rp_filter
+    shell: printf 'sysctl -w net.ipv4.conf.{{ PublicIpGateway.internetIntfName }}.rp_filter=0\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: disable rp_filter
+    command: sysctl -w net.ipv4.conf.vxlan2.rp_filter=0
+    ignore_errors: yes
+  - name: disable rp_filter
+    shell: printf 'sysctl -w net.ipv4.conf.vxlan2.rp_filter=0\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: disable rp_filter
+    command: sysctl -w net.ipv4.conf.lo.rp_filter=0
+    ignore_errors: yes
+  - name: disable rp_filter
+    shell: printf 'sysctl -w net.ipv4.conf.lo.rp_filter=0\n' >> /etc/publicIpGateway_start.sh
+    ignore_errors: yes
+
+  - name: "change the file permissons"
+    command: chmod +x /etc/publicIpGateway_start.sh
+
+  - name: " # change permsion on the the /etc/rc.local "
+    command: chmod +x /etc/rc.local
+    ignore_errors: yes
+
+  - name: " # change permsion on the the /etc/rc.local "
+    command: chmod 666 /etc/publicIpGateway_state
+    ignore_errors: yes

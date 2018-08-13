@@ -1,0 +1,25 @@
+{
+        "Interfaces": [{
+                        "Name": "eth0",
+                        "IPConfigurations": [{
+                                "IPAddress": "12.1.5.5",
+                                "PrefixLength": 24,
+                                "DefaultGateway": "12.1.5.1",
+                                "IsPrimary": true
+                        }],
+                        "IsPrimary": true,
+                        "Description": "connected to cloudsimple network"
+                },
+                {
+                        "Name": "eth1",
+                        "IPConfigurations": [{
+                                "IPAddress": "12.1.5.8",
+                                "PrefixLength": 24,
+                                "DefaultGateway": "12.1.5.1",
+                                "IsPrimary": true 
+                        }],
+                        "Description": "connected to internet"
+                }
+        ],
+}
+

@@ -1,0 +1,83 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  
+  "metadata": {
+    "description": "NSGs for the Internet-facing NIC on PublicIp Gateway. This is a goal-state template (not incremental); the NSG rules defined here will wipe any existing ones (apart from Azure's default ones). Run the template using the resource group of customer's PublicIp Gateway. Save a copy of template values for each customer in a new file and include customer's alias for reference (e.g., NSGs_trumporg.json)."
+  },
+  
+  "variables": {
+    "PIPGW_InternetNic_NSG":"PIPGW_InternetNic_NSG"
+  },
+  
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2017-08-01",
+      "name": "[variables('PIPGW_InternetNic_NSG')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+	  {
+            "name": "IN_Allow_VIP_51_143_10_150",
+            "properties": {
+              "description": "Allow traffic for PIP_VIP1",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "12.1.3.9/32",
+              "access": "Allow",
+              "priority": 300,
+              "direction": "Inbound"
+            }
+          },
+	  {
+            "name": "IN_BlockAll",
+            "properties": {
+              "description": "Block all incoming traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 400,
+              "direction": "Inbound"
+            }
+          },
+	  
+	  
+	  {
+            "name": "OUT_AllowInternet",
+            "properties": {
+              "description": "Allow Internet Out",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "Internet",
+              "access": "Allow",
+              "priority": 400,
+              "direction": "Outbound"
+            }
+          },
+	  {
+            "name": "OUT_BlockRemaining",
+            "properties": {
+              "description": "Block all remaining outgoing traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 500,
+              "direction": "Outbound"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
